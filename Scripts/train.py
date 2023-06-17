@@ -15,9 +15,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # hyperparameters sent by the client are passed as command-line arguments to the script.
-    parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--train_batch_size", type=int, default=32)
-    parser.add_argument("--eval_batch_size", type=int, default=64)
+    parser.add_argument("--epochs", type=int, default=2)
+    parser.add_argument("--train_batch_size", type=int, default=16)
+    parser.add_argument("--eval_batch_size", type=int, default=16)
     parser.add_argument("--warmup_steps", type=int, default=500)
     parser.add_argument("--model_id", type=str)
     parser.add_argument("--learning_rate", type=str, default=5e-5)
@@ -42,11 +42,11 @@ if __name__ == "__main__":
     )
 
     # load datasets
-    train_dataset = load_from_disk(args.training_dir)
-    test_dataset = load_from_disk(args.test_dir)
+    dataset_train = load_from_disk(args.training_dir)
+    dataset_test = load_from_disk(args.test_dir)
 
-    logger.info(f" loaded train_dataset length is: {len(train_dataset)}")
-    logger.info(f" loaded test_dataset length is: {len(test_dataset)}")
+    logger.info(f" loaded train_dataset length is: {len(dataset_train)}")
+    logger.info(f" loaded test_dataset length is: {len(dataset_test)}")
 
     metric = load_metric("accuracy")
 
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         return metric.compute(predictions=predictions, references=labels)
 
     # Prepare model labels - useful in inference API
-    labels = train_dataset.features["labels"].names
+    labels = dataset_train.features["labels"].names
     num_labels = len(labels)
     label2id, id2label = dict(), dict()
     for i, label in enumerate(labels):
@@ -92,8 +92,8 @@ if __name__ == "__main__":
         model=model,
         args=training_args,
         compute_metrics=compute_metrics,
-        train_dataset=train_dataset,
-        eval_dataset=test_dataset,
+        train_dataset=dataset_train,
+        eval_dataset=dataset_test,
         tokenizer=tokenizer,
     )
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
         trainer.train()
 
     # evaluate model
-    eval_result = trainer.evaluate(eval_dataset=test_dataset)
+    eval_result = trainer.evaluate(eval_dataset=dataset_test)
 
     # writes eval result to file which can be accessed later in s3 ouput
     with open(os.path.join(args.output_data_dir, "eval_results.txt"), "w") as writer:
